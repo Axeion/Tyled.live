@@ -10,11 +10,13 @@ const SLIDE_DURATION   = Number(import.meta.env.VITE_SLIDE_DURATION_MS)   || 9_0
 const WELCOME_DURATION = Number(import.meta.env.VITE_WELCOME_DURATION_MS) || 7_000
 const CHECKIN_URL      = import.meta.env.VITE_CHECKIN_URL || 'https://mizpah.tyled.live/checkin'
 
-const SLIDES = ['home', 'events', 'photos', 'attendees', 'minutes']
+const ALL_SLIDES = ['home', 'events', 'photos', 'attendees', 'minutes']
 
 export default function App() {
   const clock = useClock()
-  const { tonight, attendees, events, photos, minutes, newCheckin } = useData()
+  const { tonight, attendees, events, photos, minutes, newCheckin, slideConfig } = useData()
+
+  const SLIDES = ALL_SLIDES.filter(s => s === 'home' || slideConfig[s] !== false)
 
   const [slideIdx,       setSlideIdx]       = useState(0)
   const [animKey,        setAnimKey]        = useState(0)

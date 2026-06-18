@@ -35,6 +35,8 @@ async function fetchJSON(url) {
   }
 }
 
+const DEFAULT_SLIDES = { home: true, events: true, photos: true, attendees: true, minutes: true }
+
 export function useData() {
   const [tonight,    setTonight]   = useState(DEFAULTS.tonight)
   const [attendees,  setAttendees] = useState(DEFAULTS.attendees)
@@ -42,6 +44,7 @@ export function useData() {
   const [photos,     setPhotos]    = useState(DEFAULTS.photos)
   const [minutes,    setMinutes]   = useState(DEFAULTS.minutes)
   const [newCheckin, setNewCheckin] = useState(null)
+  const [slideConfig, setSlideConfig] = useState(DEFAULT_SLIDES)
 
   const prevLenRef = useRef(0)
 
@@ -106,5 +109,16 @@ export function useData() {
     return () => clearInterval(id)
   }, [])
 
-  return { tonight, attendees, events, photos, minutes, newCheckin }
+  // Slide config — 5 min (admin-controlled)
+  useEffect(() => {
+    const poll = async () => {
+      const data = await fetchJSON(`${BASE}/webhook/tyled/config`)
+      if (data?.slides) setSlideConfig(data.slides)
+    }
+    poll()
+    const id = setInterval(poll, 5 * 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  return { tonight, attendees, events, photos, minutes, newCheckin, slideConfig }
 }

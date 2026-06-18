@@ -41,3 +41,19 @@ CREATE TABLE IF NOT EXISTS lodge_members (
   dues_paid BOOLEAN DEFAULT FALSE,
   active    BOOLEAN DEFAULT TRUE
 );
+
+-- Key/value store for admin-controlled config
+-- Keys: tv_schedule, tv_pending_command, tonight_override, slide_config
+CREATE TABLE IF NOT EXISTS tyled_config (
+  key       TEXT PRIMARY KEY,
+  value     JSONB NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed defaults so reads never return null
+INSERT INTO tyled_config (key, value) VALUES
+  ('tv_schedule',        '{"enabled":false,"onTime":"18:30","offTime":"22:30","days":[1,2,3,4,5]}'),
+  ('tv_pending_command', 'null'),
+  ('tonight_override',   '{"active":false}'),
+  ('slide_config',       '{"home":true,"events":true,"photos":true,"attendees":true,"minutes":true}')
+ON CONFLICT (key) DO NOTHING;

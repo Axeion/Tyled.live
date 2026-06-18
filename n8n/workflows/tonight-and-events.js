@@ -6,8 +6,11 @@
 // Credentials to configure in n8n:
 //   - "Google Calendar" → googleCalendarOAuth2Api
 //     Set calendar ID to your lodge's Google Calendar ID
+//   - "Tyled Postgres"  → postgres (Neon connection)
 
 import { workflow, node, trigger, newCredential, expr } from '@n8n/workflow-sdk';
+
+// ─── Tonight flow ────────────────────────────────────────────────────────────
 
 const tonightWebhookTrigger = trigger({
   type: 'n8n-nodes-base.webhook',
@@ -24,6 +27,90 @@ const tonightWebhookTrigger = trigger({
   output: [{}]
 });
 
+const checkTonightOverride = node({
+  type: 'n8n-nodes-base.postgres',
+  version: 2.5,
+  config: {
+    name: 'Check Tonight Override',
+    parameters: {
+      resource: 'database',
+      operation: 'select',
+      schema: { __rl: true, mode: 'name', value: 'public' },
+      table:  { __rl: true, mode: 'name', value: 'tyled_config' },
+      limit: 1,
+      where: {
+        values: [{ column: 'key', value: 'tonight_override' }]
+      }
+    },
+    credentials: { postgres: newCredential('Tyled Postgres') },
+    position: [480, 300]
+  },
+  output: [{ key: 'tonight_override', value: { active: false } }]
+});
+
+const branchOnOverride = node({
+  type: 'n8n-nodes-base.if',
+  version: 2.2,
+  config: {
+    name: 'Override Active?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' },
+        combinator: 'and',
+        conditions: [
+          {
+            id: 'override-check',
+            operator: { type: 'boolean', operation: 'true' },
+            leftValue: expr('{{ $json.value.active }}'),
+            rightValue: ''
+          }
+        ]
+      }
+    },
+    position: [720, 300]
+  },
+  output: [{}, {}]
+});
+
+// Branch: override is active — shape from stored value
+const shapeOverride = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Shape Override',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode: `const ov = $input.first().json.value;
+return [{
+  json: {
+    hasEvent: true,
+    title:   ov.title   || '',
+    type:    ov.type    || 'STATED',
+    time:    ov.time    || '',
+    dress:   ov.dress   || '',
+    agenda:  Array.isArray(ov.agenda) ? ov.agenda : [],
+    notes:   ov.notes   || '',
+    weather: null
+  }
+}];`
+    },
+    position: [960, 200]
+  },
+  output: [{ hasEvent: true, title: 'Stated Communication', type: 'STATED', time: '7:30 PM', dress: 'Business Attire', agenda: ['Opening'], notes: '', weather: null }]
+});
+
+const respondTonightOverride = node({
+  type: 'n8n-nodes-base.respondToWebhook',
+  version: 1.5,
+  config: {
+    name: 'Respond Tonight Override',
+    parameters: { respondWith: 'firstIncomingItem' },
+    position: [1200, 200]
+  },
+  output: [{}]
+});
+
+// Branch: no override — query Google Calendar
 const getTodayEvents = node({
   type: 'n8n-nodes-base.googleCalendar',
   version: 1.3,
@@ -43,7 +130,7 @@ const getTodayEvents = node({
       }
     },
     credentials: { googleCalendarOAuth2Api: newCredential('Google Calendar') },
-    position: [480, 300]
+    position: [960, 400]
   },
   output: [{ summary: 'Stated Meeting', start: { dateTime: '2024-01-01T19:00:00Z' }, description: 'AGENDA: Opening\nDRESS: Dark Suit' }]
 });
@@ -69,18 +156,14 @@ else if (title.includes('DARK'))   type = 'DARK';
 
 const desc = ev.description || '';
 
-// Extract DRESS: line
 const dressMatch = desc.match(/DRESS:\\s*([^\\n]+)/i);
 const dress = dressMatch ? dressMatch[1].trim() : '';
 
-// Extract AGENDA: block — everything after AGENDA: up to end or next all-caps keyword
 const agendaMatch = desc.match(/AGENDA:\\s*([\\s\\S]*?)(?:\\n[A-Z]+:|$)/i);
 const agenda = agendaMatch
   ? agendaMatch[1].split('\\n').map(s => s.trim()).filter(Boolean)
   : [];
 
-// Time formatted for display
-const dt = ev.start?.dateTime || ev.start?.date || '';
 let timeStr = '';
 if (ev.start?.dateTime) {
   const d = new Date(ev.start.dateTime);
@@ -100,7 +183,7 @@ return [{
   }
 }];`
     },
-    position: [720, 300]
+    position: [1200, 400]
   },
   output: [{ hasEvent: true, title: 'Stated Meeting', type: 'STATED', time: '7:00 PM', dress: 'Dark Suit', agenda: ['Opening', 'Reading of Minutes'], notes: '', weather: null }]
 });
@@ -110,13 +193,13 @@ const respondTonight = node({
   version: 1.5,
   config: {
     name: 'Respond Tonight JSON',
-    parameters: {
-      respondWith: 'firstIncomingItem'
-    },
-    position: [960, 300]
+    parameters: { respondWith: 'firstIncomingItem' },
+    position: [1440, 400]
   },
   output: [{}]
 });
+
+// ─── Events flow ─────────────────────────────────────────────────────────────
 
 const eventsWebhookTrigger = trigger({
   type: 'n8n-nodes-base.webhook',
@@ -128,7 +211,7 @@ const eventsWebhookTrigger = trigger({
       path: 'tyled/events',
       responseMode: 'responseNode'
     },
-    position: [240, 600]
+    position: [240, 700]
   },
   output: [{}]
 });
@@ -152,7 +235,7 @@ const getNext60DayEvents = node({
       }
     },
     credentials: { googleCalendarOAuth2Api: newCredential('Google Calendar') },
-    position: [480, 600]
+    position: [480, 700]
   },
   output: [{ summary: 'Stated Meeting', start: { dateTime: '2024-01-01T19:00:00Z' } }]
 });
@@ -188,7 +271,7 @@ return items.map(item => {
   };
 });`
     },
-    position: [720, 600]
+    position: [720, 700]
   },
   output: [{ day: 1, month: 'Jan', title: 'Stated Meeting', time: '7:00 PM', type: 'STATED', date: '2024-01-01T19:00:00Z' }]
 });
@@ -198,19 +281,25 @@ const respondEvents = node({
   version: 1.5,
   config: {
     name: 'Respond Events Array',
-    parameters: {
-      respondWith: 'allIncomingItems'
-    },
-    position: [960, 600]
+    parameters: { respondWith: 'allIncomingItems' },
+    position: [960, 700]
   },
   output: [{}]
 });
 
 export default workflow('tonight-and-events', 'Tonight and Events')
+  // Tonight flow: check override → branch → respond
   .add(tonightWebhookTrigger)
-  .to(getTodayEvents)
+  .to(checkTonightOverride)
+  .to(branchOnOverride)
+  // true branch (output 0) → override active
+  .branch(0, shapeOverride)
+  .to(respondTonightOverride)
+  // false branch (output 1) → Calendar
+  .branch(1, getTodayEvents)
   .to(shapeTonightEvent)
   .to(respondTonight)
+  // Events flow (independent)
   .add(eventsWebhookTrigger)
   .to(getNext60DayEvents)
   .to(shapeEventsList)
