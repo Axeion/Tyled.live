@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Check In — Tyled</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg:      #F5F1EB;
+        --surface: #FFFFFF;
+        --navy:    #1D2F4E;
+        --navyLt:  #2D4266;
+        --gold:    #A67C2A;
+        --goldLt:  #C9A84C;
+        --text:    #1A1A1A;
+        --sub:     #64748B;
+        --muted:   #9CA3AF;
+        --border:  #E4DED4;
+        --serif:   'Playfair Display', Georgia, serif;
+        --sans:    'Inter', system-ui, sans-serif;
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--bg);
+        font-family: var(--sans);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 24px 40px;
+      }
+
+      /* ── Header ── */
+      .header {
+        width: 100%;
+        background: var(--navy);
+        margin: 0 -24px;
+        padding: 20px 24px 18px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 36px;
+        width: calc(100% + 48px);
+      }
+
+      .header-text { flex: 1; }
+      .header-title {
+        font-family: var(--serif);
+        font-size: 17px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .header-sub {
+        font-size: 11px;
+        color: var(--goldLt);
+        letter-spacing: 0.06em;
+        margin-top: 2px;
+      }
+
+      /* ── Seal SVG ── */
+      .seal { flex-shrink: 0; }
+
+      /* ── Form screen ── */
+      #screen-form {
+        width: 100%;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        animation: fadeUp 0.4s ease forwards;
+      }
+
+      .section-title {
+        font-family: var(--serif);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--navy);
+        text-align: center;
+      }
+      .section-sub {
+        font-size: 14px;
+        color: var(--sub);
+        text-align: center;
+        margin-top: -12px;
+      }
+
+      /* Search wrapper */
+      .search-wrap {
+        position: relative;
+      }
+      .search-input {
+        width: 100%;
+        font-family: var(--sans);
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--text);
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px 14px 46px;
+        outline: none;
+        transition: border-color 0.2s;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+      .search-input:focus {
+        border-color: var(--navy);
+      }
+      .search-input::placeholder { color: var(--muted); }
+      .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        pointer-events: none;
+        font-size: 18px;
+        line-height: 1;
+      }
+      .search-clear {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--border);
+        border: none;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--sub);
+      }
+      .search-clear.visible { display: flex; }
+
+      /* Dropdown */
+      .dropdown {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(29,47,78,0.12);
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+      }
+      .dropdown.open { display: block; }
+      .dropdown-item {
+        padding: 12px 16px;
+        font-size: 15px;
+        color: var(--text);
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.1s;
+      }
+      .dropdown-item:last-child { border-bottom: none; }
+      .dropdown-item:hover, .dropdown-item.active { background: var(--bg); }
+      .dropdown-item .item-role {
+        font-size: 11px;
+        color: var(--gold);
+        font-weight: 600;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+      .dropdown-item .item-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--navy);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+      }
+      .dropdown-empty {
+        padding: 14px 16px;
+        font-size: 14px;
+        color: var(--sub);
+        text-align: center;
+      }
+
+      /* Guest toggle */
+      .guest-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--sub);
+        cursor: pointer;
+        user-select: none;
+      }
+      .guest-row input[type="checkbox"] { display: none; }
+      .guest-check {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        transition: all 0.15s;
+        flex-shrink: 0;
+      }
+      .guest-row.checked .guest-check {
+        background: var(--navy);
+        border-color: var(--navy);
+        color: #fff;
+      }
+
+      /* Submit button */
+      .btn-checkin {
+        width: 100%;
+        background: var(--navy);
+        color: #fff;
+        font-family: var(--sans);
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: none;
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-checkin:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn-checkin:not(:disabled):active { transform: scale(0.98); }
+      .btn-checkin::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08));
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      /* ── Loading screen ── */
+      #screen-loading {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        padding-top: 60px;
+        animation: fadeUp 0.3s ease forwards;
+      }
+      .spinner {
+        width: 56px;
+        height: 56px;
+        border: 3px solid var(--border);
+        border-top-color: var(--navy);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      .loading-text {
+        font-family: var(--serif);
+        font-size: 18px;
+        color: var(--sub);
+      }
+
+      /* ── Success screen ── */
+      #screen-success {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding-top: 20px;
+        text-align: center;
+        animation: fadeUp 0.4s ease forwards;
+      }
+      .success-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--sub);
+      }
+      .success-name {
+        font-family: var(--serif);
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--navy);
+        line-height: 1.1;
+        animation: nameIn 0.5s 0.2s ease both;
+      }
+      .success-role {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--gold);
+        margin-top: -8px;
+      }
+      .success-divider {
+        width: 48px;
+        height: 1px;
+        background: var(--goldLt);
+      }
+      .success-lodge {
+        font-family: var(--serif);
+        font-size: 14px;
+        color: var(--sub);
+      }
+      .success-check {
+        width: 56px;
+        height: 56px;
+        background: #D1FAE5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        animation: pop 0.4s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+      .btn-done {
+        margin-top: 12px;
+        background: none;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 32px;
+        font-family: var(--sans);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--sub);
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+      .btn-done:hover { border-color: var(--navy); color: var(--navy); }
+
+      /* ── Error banner ── */
+      .error-banner {
+        background: #FEE2E2;
+        border: 1px solid #FECACA;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #991B1B;
+        display: none;
+        text-align: center;
+      }
+      .error-banner.visible { display: block; }
+
+      /* ── Animations ── */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes nameIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes pop {
+        from { transform: scale(0); opacity: 0; }
+        to   { transform: scale(1); opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Header -->
+      <div class="header">
+        <svg class="seal" width="36" height="36" viewBox="0 0 100 100" fill="none">
+          <path d="M18 72 L18 38 L52 38" stroke="#C9A84C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M50 12 L24 74" stroke="#C9A84C" stroke-width="6" stroke-linecap="round"/>
+          <path d="M50 12 L76 74" stroke="#C9A84C" stroke-width="6" stroke-linecap="round"/>
+          <path d="M28 64 Q50 84 72 64" stroke="#C9A84C" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <text x="50" y="58" text-anchor="middle" font-family="Georgia, serif" font-size="22" font-weight="bold" fill="#C9A84C">G</text>
+        </svg>
+        <div class="header-text">
+          <div class="header-title">Mizpah Lodge No. 148</div>
+          <div class="header-sub">F&amp;AM · Omaha, Nebraska</div>
+        </div>
+      </div>
+
+      <!-- Form screen -->
+      <div id="screen-form">
+        <div class="section-title">Check In</div>
+        <div class="section-sub">Enter your name to check in for tonight's meeting.</div>
+
+        <div class="search-wrap">
+          <span class="search-icon">&#9901;</span>
+          <input
+            id="name-input"
+            class="search-input"
+            type="text"
+            placeholder="Your name…"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+          />
+          <button class="search-clear" id="clear-btn" aria-label="Clear" tabindex="-1">&#10005;</button>
+          <div class="dropdown" id="dropdown"></div>
+        </div>
+
+        <div class="error-banner" id="error-banner"></div>
+
+        <label class="guest-row" id="guest-row">
+          <input type="checkbox" id="guest-check" />
+          <span class="guest-check" id="guest-check-box">&#10003;</span>
+          <span>I'm a guest / non-member</span>
+        </label>
+
+        <button class="btn-checkin" id="btn-checkin" disabled>Check In</button>
+
+        <div class="hint">Scan the QR code on the display to check in.</div>
+      </div>
+
+      <!-- Loading screen -->
+      <div id="screen-loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Checking you in…</div>
+      </div>
+
+      <!-- Success screen -->
+      <div id="screen-success">
+        <div class="success-check">&#10003;</div>
+        <div class="success-label">Welcome, Brother</div>
+        <div class="success-name" id="success-name"></div>
+        <div class="success-role" id="success-role"></div>
+        <div class="success-divider"></div>
+        <div class="success-lodge">Mizpah Lodge No. 148</div>
+        <button class="btn-done" id="btn-done">Done</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/checkin/main.js"></script>
+  </body>
+</html>

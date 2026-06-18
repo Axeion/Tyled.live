@@ -148,6 +148,50 @@ const respondAttendees = node({
   output: [{}]
 });
 
+// GET /webhook/tyled/members — used by the check-in PWA for autocomplete
+const membersWebhookTrigger = trigger({
+  type: 'n8n-nodes-base.webhook',
+  version: 2.1,
+  config: {
+    name: 'GET Members Webhook',
+    parameters: {
+      httpMethod: 'GET',
+      path: 'tyled/members',
+      responseMode: 'responseNode'
+    },
+    position: [240, 900]
+  },
+  output: [{}]
+});
+
+const selectActiveMembers = node({
+  type: 'n8n-nodes-base.postgres',
+  version: 2.6,
+  config: {
+    name: 'Select Active Members',
+    parameters: {
+      operation: 'executeQuery',
+      query: 'SELECT name, role FROM lodge_members WHERE active = TRUE ORDER BY name ASC'
+    },
+    credentials: { postgres: newCredential('Tyled Postgres') },
+    position: [480, 900]
+  },
+  output: [{ name: 'John Doe', role: 'Master Mason' }]
+});
+
+const respondMembers = node({
+  type: 'n8n-nodes-base.respondToWebhook',
+  version: 1.5,
+  config: {
+    name: 'Respond Members Array',
+    parameters: {
+      respondWith: 'allIncomingItems'
+    },
+    position: [720, 900]
+  },
+  output: [{}]
+});
+
 export default workflow('checkin-handler', 'Check-In Handler')
   .add(checkinWebhookTrigger)
   .to(upsertCheckin)
@@ -156,4 +200,7 @@ export default workflow('checkin-handler', 'Check-In Handler')
   .to(respondCheckin)
   .add(attendeesWebhookTrigger)
   .to(selectTodayCheckins)
-  .to(respondAttendees);
+  .to(respondAttendees)
+  .add(membersWebhookTrigger)
+  .to(selectActiveMembers)
+  .to(respondMembers);

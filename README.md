@@ -76,13 +76,24 @@ Import the 5 JSON files from `n8n/workflows/` into your n8n instance. Map creden
 # /etc/caddy/Caddyfile
 mizpah.tyled.live {
     root * /var/www/tyled/dist
-    file_server
-    try_files {path} /index.html
+
+    # Check-in PWA served as its own page — no SPA fallback for this path
+    handle /checkin {
+        rewrite * /checkin.html
+        file_server
+    }
+
+    # Display app — SPA fallback for all other routes
+    handle {
+        file_server
+        try_files {path} /index.html
+    }
 }
 ```
 
 ```bash
 npm run build
+# Builds both index.html (display app) and checkin.html (check-in PWA)
 # Copy dist/ to /var/www/tyled/dist on your VPS
 
 # TV kiosk mode
