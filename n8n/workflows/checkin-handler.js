@@ -36,7 +36,7 @@ const upsertCheckin = node({
       operation: 'executeQuery',
       query: 'INSERT INTO tyled_checkins (name, avatar_url, event_date, checked_in_at) VALUES ($1, $2, CURRENT_DATE, NOW()) ON CONFLICT (name, event_date) DO UPDATE SET avatar_url = EXCLUDED.avatar_url, checked_in_at = NOW() RETURNING id, name, avatar_url, event_date, checked_in_at',
       options: {
-        queryReplacement: expr('{{ $json.body.name + "," + ($json.body.avatarUrl || "") }}')
+        queryReplacement: expr('{{ [$json.body.name, $json.body.avatarUrl || ""] }}')
       }
     },
     credentials: { postgres: newCredential('Tyled Postgres') },
