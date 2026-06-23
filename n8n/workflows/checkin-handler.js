@@ -52,7 +52,7 @@ const lookupMemberRole = node({
     name: 'Lookup Member Role',
     parameters: {
       operation: 'executeQuery',
-      query: 'SELECT role FROM lodge_members WHERE LOWER(name) = LOWER($1) LIMIT 1',
+      query: "SELECT COALESCE((SELECT role FROM lodge_members WHERE LOWER(name) = LOWER($1) LIMIT 1), 'Brother') AS role",
       options: {
         queryReplacement: expr('{{ $("POST Checkin Webhook").item.json.body.name }}')
       }
