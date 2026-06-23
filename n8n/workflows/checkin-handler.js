@@ -72,12 +72,13 @@ const discordCheckinPost = node({
       resource: 'message',
       operation: 'send',
       authentication: 'botToken',
-      guildId: { __rl: true, mode: 'id', value: '000000000000000000' },
+      guildId: { __rl: true, mode: 'id', value: '1512292365279166677' },
       sendTo: 'channel',
-      channelId: { __rl: true, mode: 'id', value: '000000000000000001' },
+      channelId: { __rl: true, mode: 'id', value: '1518966997793243356' },
       content: expr('{{ $("POST Checkin Webhook").item.json.body.name + " (" + ($json.role || "Guest") + ") has checked in." }}')
     },
     credentials: { discordBotApi: newCredential('Discord Bot') },
+    continueOnFail: true,
     position: [960, 300]
   },
   output: [{ id: 'msg1' }]
